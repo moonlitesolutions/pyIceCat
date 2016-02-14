@@ -125,6 +125,9 @@ class ModTest(unittest.TestCase):
 
 		# test the multi threaded method
 		catalog.add_product_details_parallel(keys=detail_keys,connections=50)
+		
+		# second run to test the reactor restart
+		catalog.add_product_details_parallel(keys=detail_keys,connections=50)
 		self.assertEqual(catalog.get_data()[2]['shortdesc'],'64-bit Xeon Processor 2.80 GHz, 1M Cache, 800 MHz FSB')
 
 		# test file dump
@@ -212,8 +215,6 @@ if __name__ == '__main__':
 # 	'https://data.icecat.biz/export/freexml.int/EN/108912.xml',
 # 	'https://data.icecat.biz/export/freexml.int/EN/110722.xml',
 # 	]
-
-# auth = ('gokoyev@gmail.com','IceCat12')
 
 # download = bulk_downloader.fetchURLs(log=log, urls=urls, auth=auth)
 
