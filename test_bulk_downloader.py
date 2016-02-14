@@ -27,6 +27,24 @@ class ModTest(unittest.TestCase):
 		# we should have downloaded 4 urls
 		self.assertEqual(download.get_count(), 4)
 
+	def testReactor2(self):
+		'''
+		this verifies that basic Auth is working wit the downloader
+		also tests SSL connction, and basic downloads.
+		'''
+		
+		download = bulk_downloader.fetchURLs(log=self.log, 
+											urls=['https://httpbin.org/basic-auth/icat/passwd',
+												'http://www.google.com/deadbeef', 
+							                    'http://www.bing.com/', 
+							                    'http://www.yahoo.com/',],
+											data_dir=self.data_dir,
+											auth=('icat', 'passwd'))
+		# we should have downloaded 3 urls, faild for deadbeef
+		self.assertEqual(download.get_count(), 3)
+
+
+
 		'''
 		do not add additional bulk_downloader.fetchURLs tests to this file
 		the twisted reactor is not restartable and additional tests will fail.

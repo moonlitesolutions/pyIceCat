@@ -140,14 +140,14 @@ class ModTest(unittest.TestCase):
 
 
 
-	def _testXDailyDownload(self):
+	def testXDailyDownload(self):
 		'''
 		load all data files from Ice Cat. 
 		this test check that data is parsed correctly to the dictionary
 		product details are tested. parallel download tested
 		it's normal for this test to run long, several minutes
 		'''
-		data_dir = '_daily_test_data/'
+		self.data_dir = '_daily_test_data/'
 
 		categories = IceCat.IceCatCategoryMapping(log=self.log, data_dir=self.data_dir, auth=self.auth)
 		suppliers = IceCat.IceCatSupplierMapping(log=self.log, auth=self.auth, data_dir=self.data_dir)

@@ -1,11 +1,14 @@
-from twisted.internet import defer, reactor
-from twisted.web.client import getPage, downloadPage, HTTPConnectionPool
 import time, os, base64
 
-from twisted.internet.defer import DeferredSemaphore
+from threading import Thread
+import requests
+from time import time, sleep
+from Queue import Queue
+import logging
+
 
 # based on http://stackoverflow.com/questions/3490173/how-can-i-speed-up-fetching-pages-with-urllib2-in-python
-# answered Aug 16 '10 at 3:20 by habnabit
+# 
 
 # modified by k3i to limit number of simultanious connections with DeferredSemaphore
 
@@ -21,7 +24,10 @@ class fetchURLs(object):
                 auth=('goober@aol.com','password'),
                 connections=5):
 
-        self.urls = urls
+        self.urls = Queue()
+        for i in urls:
+            self.urls.put(i)
+
         self.data_dir = data_dir
         self.connections = connections
         if auth is not None:
@@ -29,71 +35,46 @@ class fetchURLs(object):
         if log:
             self.log = log
         else:
-            import logging
             self.log = logging.getLogger()
         
+        logging.getLogger("requests").setLevel(logging.WARNING)
+        # self.log.setLevel(logging.WARNING)
+
         self._download()
 
-
-    def _processPage(self, page, url):
-        # do somewthing here.
-        return url, len(page)
-
-    def _printResults(self, result, url):
-        for success, value in result:
-            if not success:
-                self.log.warning("Failure fetching {}: {}".format(url, value.getErrorMessage()))
-            else:
-                self.success_count += 1
-                self.log.debug("Fetched {}".format(url))
-
-    def _printDelta(self, _, start):
-        delta = time.time() - start
-        self.log.info('fetched {} URLs in %0.3fs'.format(len(self.urls)) % (delta,))
-        return delta
-
-    def _fetchURLs(self,auth,connections):
-        headers={"Authorization": auth}
-        callbacks = []
-        sem = defer.DeferredSemaphore(connections)   
-        for url in self.urls:
+    def _worker(self):
+        while True:
+            url = self.urls.get()
             bn = os.path.basename(url)
             if not bn:
                 file = self.data_dir + os.path.basename(os.path.dirname(url)) + '.index.html'
             else:
                 file = self.data_dir + bn
-            d = sem.run(downloadPage, url, file, headers=headers)
-            # d.addCallback(self._processPage, url)
-            callbacks.append(d)
 
-        callbacks = defer.DeferredList(callbacks)
-        callbacks.addCallback(self._printResults, url)
-        return callbacks
+            res = requests.get(url, auth=self.auth, stream=True)
+            with open(file, 'wb') as f:
+                for chunk in res.iter_content(chunk_size=1024):
+                    if chunk:
+                        f.write(chunk)
+            if 200 <=res.status_code < 299:
+                self.success_count += 1
+                self.log.debug("Fetched {}".format(url))
+            else:
+                self.log.error("Bad status code: {} for url: {}".format(res.status_code, url))
 
-    @defer.inlineCallbacks
-    def _main(self):
-        # times = []
-        # for x in xrange(5):
-        basicAuth = base64.encodestring("%s:%s" % self.auth)
-        authHeader = "Basic " + basicAuth.strip( )
-
-        d = self._fetchURLs(auth=authHeader,connections=self.connections)
-        d.addCallback(self._printDelta, time.time())
-        yield d
-            # times.append((yield d))
-        # print 'avg time: %0.3fs' % (sum(times) / len(times),)
-        if reactor.running:
-            reactor.stop()
-
+            self.urls.task_done()    
+    
     def _download(self):
-        # pool = HTTPConnectionPool(reactor, persistent=True)
-        # pool.maxPersistentPerHost = self.connections
         self.success_count = 0
         if not os.path.exists(self.data_dir):
             os.makedirs(self.data_dir)
-        reactor.callWhenRunning(self._main)
-        reactor.run()
-
+        start = time()
+        for i in range(self.connections):
+            t = Thread(target=self._worker)
+            t.daemon = True
+            t.start()
+        self.urls.join()
+        self.log.info('fetched {} URLs in %0.3fs'.format(self.success_count) % (time()-start))
 
     def get_count(self):
         '''
