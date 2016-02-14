@@ -1,4 +1,1 @@
-pyopenssl
-service_identity
-twisted
 xml2dict
