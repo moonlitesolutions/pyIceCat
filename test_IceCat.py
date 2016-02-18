@@ -140,7 +140,7 @@ class ModTest(unittest.TestCase):
 
 
 
-	def testXDailyDownload(self):
+	def _testXDailyDownload(self):
 		'''
 		load all data files from Ice Cat. 
 		this test check that data is parsed correctly to the dictionary
@@ -158,15 +158,16 @@ class ModTest(unittest.TestCase):
 		catalog = IceCat.IceCatCatalog(log=self.log,
 										suppliers=suppliers, categories=categories, 
 										data_dir=self.data_dir,
-										auth=self.auth)
-				
+										auth=self.auth,
+										)
+
 		detail_keys=['ProductDescription[@LongDesc]',
 					'ShortSummaryDescription',
 					'LongSummaryDescription',
 					'ProductDescription[@ShortDesc]']
 
 		# test the multi threaded method
-		catalog.add_product_details_parallel(keys=detail_keys,connections=50)
+		catalog.add_product_details_parallel(keys=detail_keys,connections=100)
 
 		# test file dump
 		file = 'test.large.json'
@@ -177,7 +178,41 @@ class ModTest(unittest.TestCase):
 		self.assertEqual(os.path.isfile(file), True)
 
 		
-	
+	def _testXFullDownload(self):
+		'''
+		process full catalog from Ice Cat.  Very large test, can take hours to run 
+		'''
+		self.data_dir = 'c:/temp/_full_test_data/'
+
+		categories = IceCat.IceCatCategoryMapping(log=self.log, data_dir=self.data_dir, auth=self.auth,xml_file="_full_test_data/CategoriesList.xml.gz")
+		suppliers = IceCat.IceCatSupplierMapping(log=self.log, auth=self.auth, data_dir=self.data_dir,xml_file="_full_test_data/supplier_mapping.xml")
+
+		self.assertEqual(categories.get_cat_byId("1648"), 'popcorn poppers')
+		self.assertEqual(suppliers.get_mfr_byId("7"),'Acer')
+
+		catalog = IceCat.IceCatCatalog(log=self.log,
+										suppliers=suppliers, categories=categories, 
+										data_dir=self.data_dir,
+										auth=self.auth,
+										fullcatalog=True,
+										xml_file="_full_test_data/files.index.xml",
+										)
+
+		detail_keys=['ProductDescription[@LongDesc]',
+					'ShortSummaryDescription',
+					'LongSummaryDescription',
+					'ProductDescription[@ShortDesc]']
+
+		# test the multi threaded method
+		catalog.add_product_details_parallel(keys=detail_keys,connections=100)
+
+		# test file dump
+		file = 'test.huge.json'
+		if os.path.exists(file):
+			os.remove(file)
+
+		catalog.dump_to_file(file)
+		self.assertEqual(os.path.isfile(file), True)	
 
 
 if __name__ == '__main__':    

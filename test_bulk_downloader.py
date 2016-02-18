@@ -2,6 +2,7 @@ import sys
 import logging
 import unittest
 
+
 from IceCat import bulk_downloader
 
 class ModTest(unittest.TestCase):
@@ -44,11 +45,6 @@ class ModTest(unittest.TestCase):
 		self.assertEqual(download.get_count(), 3)
 
 
-
-		'''
-		do not add additional bulk_downloader.fetchURLs tests to this file
-		the twisted reactor is not restartable and additional tests will fail.
-		'''
 
 
 if __name__ == '__main__':    

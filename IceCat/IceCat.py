@@ -14,7 +14,7 @@ import collections
 
 from multiprocessing import Process, Queue
 
-import bulk_downloader
+from IceCat import bulk_downloader
 
 # English only
 langid = "1"
@@ -57,7 +57,7 @@ class IceCat(object):
             for chunk in res.iter_content(chunk_size=1024):
                 if chunk:
                     f.write(chunk)
-        
+            f.closed
         self.log.debug("Got headers: {}".format(res.headers))
         
 
@@ -244,12 +244,12 @@ class IceCatCatalog(IceCat):
             try:
                 value.update({'supplier' : self.suppliers.get_mfr_byId(value['supplier_id'])})
             except:
-                self.log.warn("Unable to find supplier for supplier_id: {}".format(value['supplier_id']))
+                self.log.warning("Unable to find supplier for supplier_id: {}".format(value['supplier_id']))
 
             try:
                 value.update({'category' : self.categories.get_cat_byId(value['catid']).title()})
             except:
-                self.log.warn("Unable to find category for catid: {}".format(value['catid']))
+                self.log.warning("Unable to find category for catid: {}".format(value['catid']))
 
             
             '''
@@ -261,11 +261,11 @@ class IceCatCatalog(IceCat):
                 except TypeError:
                     upcs = []
                     for item in value['ean_upcs']['ean_upc']:
-                         upcs.append(item.values()[0])
+                         upcs.append(list(item.values())[0])
                     value['ean_upcs'] = upcs
                 except:
                     # something bad happened with upcs
-                    self.log.warn("Unable to unroll ean_upcs {} for product_id: {}".format(sys.exc_info(), value['product_id']))
+                    self.log.warning("Unable to unroll ean_upcs {} for product_id: {}".format(sys.exc_info(), value['product_id']))
 
 
         # skip keys we are not interested in.
@@ -289,7 +289,7 @@ class IceCatCatalog(IceCat):
 
     def _parse(self, xml_file):
         self.xml_file = xml_file
-        with open(self.xml_file, 'r') as f:
+        with open(self.xml_file, 'rb') as f:
             self.o = xmltodict.parse(f, attr_prefix='', postprocessor=self._postprocessor,
                 namespace_separator='', process_namespaces=True, namespaces=self._namespaces)
         f.closed
@@ -312,8 +312,8 @@ class IceCatCatalog(IceCat):
         if not os.path.exists(xml_dir):
             os.makedirs(xml_dir)
 
-        for item in self.o:
-            urls.append(baseurl + item['path'].encode('latin-1'))
+        for item in self.o: 
+            urls.append(baseurl + item['path'].encode('latin-1').decode())
         self.log.info("Downloading detail data with {} connections".format(self.connections))
 
         download = bulk_downloader.fetchURLs(log=self.log, urls=urls, auth=self.auth, 
@@ -325,7 +325,7 @@ class IceCatCatalog(IceCat):
             xml_file = xml_dir + os.path.basename(item['path'])
             try:
                 product_detais = IceCatProductDetails(xml_file=xml_file, keys=self.keys, 
-                    auth=self.auth, data_dir=xml_dir, log=self.log)
+                    auth=self.auth, data_dir=xml_dir, log=self.log,cleanup_data_files=False)
                 item.update(product_detais.get_data())
             except:
                 self.log.error("Could not obtain product details from IceCat for product_id {}".format(item['path']))

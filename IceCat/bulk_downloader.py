@@ -1,11 +1,14 @@
-import time, os, base64
+import os, time, datetime
 
 from threading import Thread
 import requests
 from time import time, sleep
-from Queue import Queue
+import queue
 import logging
 
+
+# import requests_cache
+# requests_cache.install_cache('c:/temp/test_cache', backend='sqlite', expire_after=3600)
 
 # based on http://stackoverflow.com/questions/3490173/how-can-i-speed-up-fetching-pages-with-urllib2-in-python
 # 
@@ -24,7 +27,7 @@ class fetchURLs(object):
                 auth=('goober@aol.com','password'),
                 connections=5):
 
-        self.urls = Queue()
+        self.urls = queue.Queue()
         for i in urls:
             self.urls.put(i)
 
@@ -43,6 +46,9 @@ class fetchURLs(object):
         self._download()
 
     def _worker(self):
+        s = requests.Session()
+        s.auth = self.auth
+
         while True:
             url = self.urls.get()
             bn = os.path.basename(url)
@@ -51,16 +57,29 @@ class fetchURLs(object):
             else:
                 file = self.data_dir + bn
 
-            res = requests.get(url, auth=self.auth, stream=True)
-            with open(file, 'wb') as f:
-                for chunk in res.iter_content(chunk_size=1024):
-                    if chunk:
-                        f.write(chunk)
+            if os.path.isfile(file):
+                modified = os.path.getmtime(file)
+                # headers = {'If-Modified-Since': }  # do this later
+                self.log.warning("Skipping {} - file exists".format(url))
+                self.urls.task_done()  
+                self.success_count += 1
+                continue
+
+            res = s.get(url)
+            
             if 200 <=res.status_code < 299:
                 self.success_count += 1
                 self.log.debug("Fetched {}".format(url))
             else:
                 self.log.error("Bad status code: {} for url: {}".format(res.status_code, url))
+                self.urls.task_done()    
+                continue
+
+            with open(file, 'wb') as f:
+                for chunk in res.iter_content(chunk_size=1024*1024):
+                    if chunk:
+                        f.write(chunk)
+            
 
             self.urls.task_done()    
     
