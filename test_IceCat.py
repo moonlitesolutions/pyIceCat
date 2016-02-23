@@ -2,7 +2,7 @@ from IceCat import IceCat
 import sys, os
 import logging
 import unittest
-
+import cProfile, pstats
 
 class ModTest(unittest.TestCase):
 
@@ -22,6 +22,27 @@ class ModTest(unittest.TestCase):
 		icat_passwd = 'bar'
 
 	auth = (icat_user, icat_passwd)
+
+
+
+
+	'''
+	uncomment setUp and tearDown for profiling report on tests
+	'''
+	# def setUp(self):
+	# 	"""init each test"""
+	# 	# self.testtree = SplayTree (1000000)
+	# 	self.pr = cProfile.Profile()
+	# 	self.pr.enable()
+	# 	print("\n<<<---")
+
+	# def tearDown(self):
+	# 	"""finish any test"""
+	# 	p = pstats.Stats(self.pr)
+	# 	p.strip_dirs()
+	# 	p.sort_stats ('cumtime')
+	# 	p.print_stats ()
+	# 	print("\n--->>>")
 
 	def testCategoriesLocal(self):
 		'''
@@ -147,7 +168,7 @@ class ModTest(unittest.TestCase):
 		product details are tested. parallel download tested
 		it's normal for this test to run long, several minutes
 		'''
-		self.data_dir = '_daily_test_data/'
+		self.data_dir = 'c:/temp/_daily_test_data/'
 
 		categories = IceCat.IceCatCategoryMapping(log=self.log, data_dir=self.data_dir, auth=self.auth)
 		suppliers = IceCat.IceCatSupplierMapping(log=self.log, auth=self.auth, data_dir=self.data_dir)
@@ -221,9 +242,6 @@ if __name__ == '__main__':
 # categories = IceCat.IceCatCategoryMapping(log=log, xml_file="_data/CategoriesList.xml")
 
 
-
-if __name__ == '__main__':    
-	unittest.main()
 
 # categories = IceCat.IceCatCategoryMapping(log=log, xml_file="_data/CategoriesList.xml")
 # # categories = IceCat.IceCatCategoryMapping(log=log)

@@ -1,1 +1,3 @@
-xml2dict
+https://github.com/martinblech/xmltodict
+progressbar2
+urllib3

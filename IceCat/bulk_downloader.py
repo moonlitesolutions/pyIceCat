@@ -1,11 +1,11 @@
-import os, time, datetime
+import os, time, datetime, sys
 
 from threading import Thread
 import requests
 from time import time, sleep
 import queue
 import logging
-
+import progressbar
 
 # import requests_cache
 # requests_cache.install_cache('c:/temp/test_cache', backend='sqlite', expire_after=3600)
@@ -43,7 +43,9 @@ class fetchURLs(object):
         logging.getLogger("requests").setLevel(logging.WARNING)
         # self.log.setLevel(logging.WARNING)
 
-        self._download()
+        print("Downloading product details:")
+        with progressbar.ProgressBar(max_value=len(urls)) as self.bar:
+            self._download()
 
     def _worker(self):
         s = requests.Session()
@@ -51,6 +53,7 @@ class fetchURLs(object):
 
         while True:
             url = self.urls.get()
+            self.bar.update(self.success_count)
             bn = os.path.basename(url)
             if not bn:
                 file = self.data_dir + os.path.basename(os.path.dirname(url)) + '.index.html'
@@ -60,18 +63,28 @@ class fetchURLs(object):
             if os.path.isfile(file):
                 modified = os.path.getmtime(file)
                 # headers = {'If-Modified-Since': }  # do this later
-                self.log.warning("Skipping {} - file exists".format(url))
+                # self.log.warning("Skipping {} - file exists".format(url))
                 self.urls.task_done()  
                 self.success_count += 1
                 continue
 
-            res = s.get(url)
+            try:
+                res = s.get(url)
+            except:
+                self.log.warning("Bad request {} for url: {}".format(sys.exc_info(), url))
+                #put item back into queue
+                self.urls.put(url)
+                self.urls.task_done()  
+                # this could be due to throttling, exit thread  
+                break
+
+
             
             if 200 <=res.status_code < 299:
                 self.success_count += 1
                 self.log.debug("Fetched {}".format(url))
             else:
-                self.log.error("Bad status code: {} for url: {}".format(res.status_code, url))
+                self.log.warning("Bad status code: {} for url: {}".format(res.status_code, url))
                 self.urls.task_done()    
                 continue
 
@@ -87,6 +100,7 @@ class fetchURLs(object):
         self.success_count = 0
         if not os.path.exists(self.data_dir):
             os.makedirs(self.data_dir)
+
         start = time()
         for i in range(self.connections):
             t = Thread(target=self._worker)

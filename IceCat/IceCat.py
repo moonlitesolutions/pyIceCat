@@ -1,11 +1,12 @@
 # use C implementation for speed
-try:
-    import xml.etree.cElementTree as ET
-except ImportError:
-    import xml.etree.ElementTree as ET
+# try:
+import xml.etree.cElementTree as ET
+# except ImportError:
+# import xml.etree.ElementTree as ET
 
 import json
 import xmltodict
+import progressbar
 
 import requests
 import gzip
@@ -267,11 +268,14 @@ class IceCatCatalog(IceCat):
                     # something bad happened with upcs
                     self.log.warning("Unable to unroll ean_upcs {} for product_id: {}".format(sys.exc_info(), value['product_id']))
 
+            self.key_count += 1
+            self.bar.update(self.key_count)
+
+
 
         # skip keys we are not interested in.
         elif key in self.exclude_keys:
             return None
-
 
         return key.lower(), value
 
@@ -289,14 +293,18 @@ class IceCatCatalog(IceCat):
 
     def _parse(self, xml_file):
         self.xml_file = xml_file
-        with open(self.xml_file, 'rb') as f:
-            self.o = xmltodict.parse(f, attr_prefix='', postprocessor=self._postprocessor,
-                namespace_separator='', process_namespaces=True, namespaces=self._namespaces)
-        f.closed
+        self.key_count = 0
 
-        # peel down to file key
-        self.o = self.o['icecat-interface']['files.index']['file']
-        self.log.info("Parsed {} products from IceCat catalog".format(str(len(self.o))))
+        print("Parsing products from index file:", xml_file)
+        with progressbar.ProgressBar(max_value=progressbar.UnknownLength) as self.bar:
+            with open(self.xml_file, 'rb') as f:
+                self.o = xmltodict.parse(f, attr_prefix='', postprocessor=self._postprocessor,
+                    namespace_separator='', process_namespaces=True, namespaces=self._namespaces)
+            f.closed
+
+            # peel down to file key
+            self.o = self.o['icecat-interface']['files.index']['file']
+            self.log.info("Parsed {} products from IceCat catalog".format(str(len(self.o))))
         return len(self.o)
 
 
@@ -320,16 +328,20 @@ class IceCatCatalog(IceCat):
                                             connections=self.connections,
                                             data_dir=xml_dir)
 
-
-        for item in self.o:
-            xml_file = xml_dir + os.path.basename(item['path'])
-            try:
-                product_detais = IceCatProductDetails(xml_file=xml_file, keys=self.keys, 
-                    auth=self.auth, data_dir=xml_dir, log=self.log,cleanup_data_files=False)
-                item.update(product_detais.get_data())
-            except:
-                self.log.error("Could not obtain product details from IceCat for product_id {}".format(item['path']))
-    
+        self.key_count = 0
+        print("Parsing product details:")
+        with progressbar.ProgressBar(max_value=len(self.o)) as self.bar:
+            for item in self.o:
+                xml_file = xml_dir + os.path.basename(item['path'])
+                self.key_count += 1
+                self.bar.update(self.key_count)
+                try:
+                    product_detais = IceCatProductDetails(xml_file=xml_file, keys=self.keys, 
+                        auth=self.auth, data_dir=xml_dir, log=self.log,cleanup_data_files=False)
+                    item.update(product_detais.get_data())
+                except:
+                    self.log.error("Could not obtain product details from IceCat for product_id {}".format(item['path']))
+        
     def add_product_details(self, keys=['ProductDescription']):
         self.keys = keys
         for item in self.o:
