@@ -7,17 +7,20 @@ import queue
 import logging
 import progressbar
 
-# import requests_cache
-# requests_cache.install_cache('c:/temp/test_cache', backend='sqlite', expire_after=3600)
-
-# based on http://stackoverflow.com/questions/3490173/how-can-i-speed-up-fetching-pages-with-urllib2-in-python
-# 
-
-# modified by k3i to limit number of simultanious connections with DeferredSemaphore
 
 
 class fetchURLs(object):
-    def __init__(self, log=None, 
+    '''     Download and save a list of URLs
+    using parallel connections.  A separate session is maintained for each
+    download thread.     If throttling is detected (broken connections)
+    the thread is terminated in order to reduce the load on the web serve.
+    If a local file already exists for a given URL, that URL is skipped.
+    There is no check currently if remote document is     newer than the
+    local file.     If the URL does not end with a file name fetchURLs
+    will generate a default filename in the format <website>.index.html
+    '''
+    def __init__(self, 
+                log=None,
                 urls = [
                     'http://www.google.com/', 
                     'http://www.bing.com/', 
@@ -28,16 +31,33 @@ class fetchURLs(object):
                 connections=5):
 
         self.urls = queue.Queue()
+        '''
+        A list of absolute urls to fetch
+        '''
+
         for i in urls:
             self.urls.put(i)
 
         self.data_dir = data_dir
+        '''
+        Directory to save files in
+        '''
+
         self.connections = connections
-        if auth is not None:
-            self.auth = auth
-        if log:
-            self.log = log
-        else:
+        '''
+        Number of simultanious download threads
+        '''
+
+        self.auth = auth
+        '''
+        Username and password touple, if needed for website authentication
+        '''
+
+        self.log = log
+        '''
+        An optional logging.getLogger() instance
+        '''
+        if not log:
             self.log = logging.getLogger()
         
         logging.getLogger("requests").setLevel(logging.WARNING)
@@ -111,6 +131,6 @@ class fetchURLs(object):
 
     def get_count(self):
         '''
-        returns number of successfully fetched urls
+        Returns the number of successfully fetched urls
         '''
         return self.success_count
