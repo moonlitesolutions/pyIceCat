@@ -1,8 +1,5 @@
 # use C implementation for speed
-# try:
 import xml.etree.cElementTree as ET
-# except ImportError:
-# import xml.etree.ElementTree as ET
 
 import json
 import xmltodict
@@ -196,15 +193,19 @@ class IceCatProductDetails(IceCat):
 
 
 class IceCatCatalog(IceCat):
-    def __init__(self, suppliers, categories, exclude_keys=['Country_Markets'], fullcatalog=False, *args, **kwargs): 
+    def __init__(self, suppliers=None, categories=None, exclude_keys=['Country_Markets'], fullcatalog=False, *args, **kwargs): 
         self.suppliers = suppliers
         self.categories = categories
+
+
         self.exclude_keys = exclude_keys
         if fullcatalog:
             self.FILENAME='files.index.xml'
         else:
             self.FILENAME='daily.index.xml'
         super(IceCatCatalog, self).__init__(*args, **kwargs)
+
+
 
 
     baseurl = 'https://data.icecat.biz/export/freexml/EN/'
@@ -294,6 +295,12 @@ class IceCatCatalog(IceCat):
     def _parse(self, xml_file):
         self.xml_file = xml_file
         self.key_count = 0
+
+        if not self.suppliers:
+            self.suppliers = IceCatSupplierMapping(log=self.log, auth=self.auth, data_dir=self.data_dir)
+        if not self.categories:
+            self.categories = IceCatCategoryMapping(log=self.log, data_dir=self.data_dir, auth=self.auth)
+
 
         print("Parsing products from index file:", xml_file)
         with progressbar.ProgressBar(max_value=progressbar.UnknownLength) as self.bar:
