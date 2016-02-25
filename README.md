@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/moonlitesolutions/pyIceCat.svg?branch=python3-test)](https://travis-ci.org/moonlitesolutions/pyIceCat)
+[![Build Status](https://travis-ci.org/moonlitesolutions/pyIceCat.svg?branch=master)](https://travis-ci.org/moonlitesolutions/pyIceCat)
 [![Documentation Status](https://readthedocs.org/projects/pyicecat/badge/?version=latest)](http://pyicecat.readthedocs.org/en/latest/?badge=latest)
 
 IceCat
