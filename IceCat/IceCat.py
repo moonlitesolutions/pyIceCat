@@ -14,22 +14,34 @@ from multiprocessing import Process, Queue
 
 from IceCat import bulk_downloader
 
+
 # English only
 langid = "1"
+'''
+Process only English data
+'''
 
 
 class IceCat(object):
     '''
-    Base Class for all Ice Cat Mappings
+
+    Base Class for all Ice Cat Mappings. Do not call this class directly.
+
+    :param log: optional logging.getLogger() instance
+    :param xml_file: XML product index file. If None the file will be downloaded from the Ice Cat web site.
+    :param auth: Username and password touple, as needed for Ice Cat website authentication
+    :param data_dir: Directory to hold downloaded reference and product xml files
+
+
     '''
     def __init__(self, log=None, xml_file=None, auth=('user','passwd'), data_dir='_data/'):
-        if log:
-            self.log = log
-        else:
+        self.log = log
+        if not log:
             import logging
             self.log = logging.getLogger()
 
         self.auth = auth
+
         self.data_dir = data_dir
 
         if not os.path.exists(self.data_dir):
@@ -71,12 +83,15 @@ class IceCat(object):
             self.log.error("Did not receive good status code: {}".format(res.status_code))
             return False
 
-    def get_data(self):
-        return self.data_map
-
-    
 
 class IceCatSupplierMapping(IceCat):
+    '''
+    Create a dict of product supplier IDs to supplier names
+
+    Refer to IceCat class for arguments
+
+    '''
+
     baseurl = 'https://data.icecat.biz/export/freeurls/'
     FILENAME='supplier_mapping.xml'
     TYPE = 'Supplier Mapping'
@@ -105,11 +120,23 @@ class IceCatSupplierMapping(IceCat):
         self.log.info("Parsed {} Manufacturers from IceCat Supplier Map".format(str(len(self.id_map.keys()))))
 
     def get_mfr_byId(self, mfr_id):
+        '''
+        Return a Product Supplier or False if no match
+
+        :param mfr_id: Supplier ID
+        '''
+
         if mfr_id in self.id_map:
             return self.id_map[mfr_id]
         return False
 
 class IceCatCategoryMapping(IceCat):
+    '''
+    Create a dict of product category IDs to category names
+
+    Refer to IceCat class for arguments
+
+    '''
     baseurl = 'https://data.icecat.biz/export/freexml/refs/'
     FILENAME='CategoriesList.xml.gz'
     TYPE = 'Categories List'
@@ -141,12 +168,29 @@ class IceCatCategoryMapping(IceCat):
         self.log.info("Parsed {} Categories from IceCat CategoriesList".format(str(len(self.id_map.keys()))))
     
     def get_cat_byId(self, cat_id):
+        '''
+        Return a Product Category or False if no match
+
+        :param cat_id: Category ID
+        '''
         if cat_id in self.id_map:
             return self.id_map[cat_id]
         return False
 
 
 class IceCatProductDetails(IceCat):
+    '''
+    Extract product detail data. It's unusual to call this class directly. Used by add_product_details..()
+
+    :param keys: a list of product detail keys. Refer to Basic Usage Example
+    :param cleanup_data_files: whether to delete xml files after parsing.
+    :param filename: xml file with the product details
+
+
+    Refer to IceCat class for additional arguments
+
+    '''
+
     def __init__(self,  keys, cleanup_data_files=True, filename=None, *args, **kwargs): 
         self.keys = keys
         self.FILENAME = filename
@@ -193,6 +237,25 @@ class IceCatProductDetails(IceCat):
 
 
 class IceCatCatalog(IceCat):
+    '''
+    Parse Ice Cat catalog index file.
+    Special handling of the input data is based on IceCAT OCI Revision date: April 24, 2015, Version 2.46:
+         - resolve supplier ID, and Category ID to their english names
+         - unroll ean_upcs nested structure to flat value, or list
+         - convert attribute names according to the table (to lower case)
+         - drop keys in the exclude_list, default ['Country_Markets']
+         - discard parent layers above 'file' key
+
+    :param suppliers: IceCatSupplierMapping object. If None specified a mapping is instantiated inside the class.
+    :param categories: IceCatCategoryMapping object. If None specified a mapping is instantiated inside the class.
+    :param exclude_keys: a list of keys to omit from the product index.
+    :param fullcatalog: Set to True to download full product catalog. 64-bit python is required for this option 
+                        because of >2GB memory footprint. You will need ~4.5 GB of virtual memory to process a 500k
+                        item catalog.
+
+    Refer to IceCat class for additional arguments
+    '''
+
     def __init__(self, suppliers=None, categories=None, exclude_keys=['Country_Markets'], fullcatalog=False, *args, **kwargs): 
         self.suppliers = suppliers
         self.categories = categories
@@ -206,20 +269,10 @@ class IceCatCatalog(IceCat):
         super(IceCatCatalog, self).__init__(*args, **kwargs)
 
 
-
-
     baseurl = 'https://data.icecat.biz/export/freexml/EN/'
     TYPE = 'Catalog Index'
 
 
-    '''
-     special handling of the input data. Based on IceCAT OCI Revision date: April 24, 2015, Version 2.46 
-     - resolve supplier ID, and Category ID to their english names
-     - unroll ean_upcs nested structure to flat value, or list
-     - convert attribute names according to the table (to lower case)
-     - drop keys in the exclude_list, default ['Country_Markets']
-     - discard parent layers above 'file' key
-    '''
 
     _namespaces = {
         'Product_ID': 'product_id',
@@ -254,9 +307,7 @@ class IceCatCatalog(IceCat):
                 self.log.warning("Unable to find category for catid: {}".format(value['catid']))
 
             
-            '''
-            unroll ean_upcs. sometimes this is a list of single value dicts, other times it's a string.
-            '''
+            # unroll ean_upcs. sometimes this is a list of single value dicts, other times it's a string.
             if 'ean_upcs' in value:
                 try:
                     value['ean_upcs'] =[value['ean_upcs']['ean_upc']['Value']]
@@ -316,6 +367,13 @@ class IceCatCatalog(IceCat):
 
 
     def add_product_details_parallel(self,keys=['ProductDescription'],connections=5):
+        '''
+        Download and parse product details, using threads.
+        
+        :param keys: List of Ice Cat product detail XML keys to include in the output.  Refer to Basic Usage Example.
+        :param connections: Number of simultanious download threads.  Do not go over 100.
+        '''
+
         self.keys = keys
         self.connections = connections
         baseurl = 'https://data.icecat.biz/'
@@ -350,6 +408,11 @@ class IceCatCatalog(IceCat):
                     self.log.error("Could not obtain product details from IceCat for product_id {}".format(item['path']))
         
     def add_product_details(self, keys=['ProductDescription']):
+        '''
+        Download and parse product details.  Use add_product_details_parallel() instead, for a much improved performance.
+
+        :param keys: List of Ice Cat product detail XML keys to include in the output.  Refer to Basic Usage Example.
+        '''
         self.keys = keys
         for item in self.o:
             try:
@@ -362,9 +425,17 @@ class IceCatCatalog(IceCat):
         
 
     def get_data(self):
+        '''
+        Return ordered list of product attributes
+        '''
         return self.o
 
     def dump_to_file(self, filename=None):
+        '''
+        Save product attributes to a JSON file
+
+        :param filename: File name
+        '''
         if filename:
             self.json_file = filename
         else:

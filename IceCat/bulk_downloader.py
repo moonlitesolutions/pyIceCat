@@ -10,7 +10,8 @@ import progressbar
 
 
 class fetchURLs(object):
-    '''     Download and save a list of URLs
+    '''     
+    Download and save a list of URLs
     using parallel connections.  A separate session is maintained for each
     download thread.     If throttling is detected (broken connections)
     the thread is terminated in order to reduce the load on the web serve.
@@ -18,6 +19,15 @@ class fetchURLs(object):
     There is no check currently if remote document is     newer than the
     local file.     If the URL does not end with a file name fetchURLs
     will generate a default filename in the format <website>.index.html
+
+    :param urls: A list of absolute URLs to fetch
+    :param data_dir:  Directory to save files in
+    :param connections: Number of simultanious download threads
+    :param auth: Username and password touple, if needed for website authentication
+    :param log: An optional logging.getLogger() instance
+
+    This class is usually called from IceCat
+
     '''
     def __init__(self, 
                 log=None,
@@ -31,32 +41,14 @@ class fetchURLs(object):
                 connections=5):
 
         self.urls = queue.Queue()
-        '''
-        A list of absolute urls to fetch
-        '''
 
         for i in urls:
             self.urls.put(i)
 
         self.data_dir = data_dir
-        '''
-        Directory to save files in
-        '''
-
         self.connections = connections
-        '''
-        Number of simultanious download threads
-        '''
-
         self.auth = auth
-        '''
-        Username and password touple, if needed for website authentication
-        '''
-
         self.log = log
-        '''
-        An optional logging.getLogger() instance
-        '''
         if not log:
             self.log = logging.getLogger()
         

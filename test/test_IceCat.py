@@ -170,14 +170,14 @@ class ModTest(unittest.TestCase):
 		'''
 		self.data_dir = 'c:/temp/_daily_test_data/'
 
-		categories = IceCat.IceCatCategoryMapping(log=self.log, data_dir=self.data_dir, auth=self.auth)
-		suppliers = IceCat.IceCatSupplierMapping(log=self.log, auth=self.auth, data_dir=self.data_dir)
+		# categories = IceCat.IceCatCategoryMapping(log=self.log, data_dir=self.data_dir, auth=self.auth)
+		# suppliers = IceCat.IceCatSupplierMapping(log=self.log, auth=self.auth, data_dir=self.data_dir)
 
-		self.assertEqual(categories.get_cat_byId("1648"), 'popcorn poppers')
-		self.assertEqual(suppliers.get_mfr_byId("7"),'Acer')
+		# self.assertEqual(categories.get_cat_byId("1648"), 'popcorn poppers')
+		# self.assertEqual(suppliers.get_mfr_byId("7"),'Acer')
 
 		catalog = IceCat.IceCatCatalog(log=self.log,
-										suppliers=suppliers, categories=categories, 
+										# suppliers=suppliers, categories=categories, 
 										data_dir=self.data_dir,
 										auth=self.auth,
 										)
