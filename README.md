@@ -6,13 +6,12 @@ IceCat
 IceCat module pulls down a local copy of data from the http://icecat.biz/ open catalog.  The module requires login credentials to the IceCat website.  The basic catalog version if free with 500k products.  The full catalog contains ~3mln products and distrubuted with a paid subscription.
 
 Requirements
-~~~~~~~~~~~~
 * python 3.3 or above, (64-bit for full catalog import)
 * requests, urlib3, xml2dict,  progressbar2 libraries.
 * see requirements.txt in the source distribution for details
 
+
 Features
-~~~~~~~~
 * For each product category id, manufacturer id are resolved to their actual names.
 * Product detail data can be added to the daily and full index, with flexible data fields
 * English language data import
@@ -22,9 +21,8 @@ Features
 * Flexible XML field mapping 
 * Tested against live IceCat web API
 
-Basic usage 
-~~~~~~~~~~~
-::
+
+Basic usage:
 
 	from IceCat import IceCat
 
