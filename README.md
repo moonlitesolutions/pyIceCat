@@ -1,4 +1,5 @@
 [![Build Status](https://travis-ci.org/moonlitesolutions/pyIceCat.svg?branch=master)](https://travis-ci.org/moonlitesolutions/pyIceCat)
+[![Coverage Status](https://coveralls.io/repos/github/moonlitesolutions/pyIceCat/badge.svg?branch=master)](https://coveralls.io/github/moonlitesolutions/pyIceCat?branch=master)
 [![Documentation Status](https://readthedocs.org/projects/pyicecat/badge/)](http://pyicecat.readthedocs.org/en/)
 
 IceCat
