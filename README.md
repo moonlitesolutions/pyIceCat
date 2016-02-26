@@ -1,5 +1,5 @@
 [![Build Status](https://travis-ci.org/moonlitesolutions/pyIceCat.svg?branch=master)](https://travis-ci.org/moonlitesolutions/pyIceCat)
-[![Documentation Status](https://readthedocs.org/projects/pyicecat/badge/?version=latest)](http://pyicecat.readthedocs.org/en/latest/?badge=latest)
+[![Documentation Status](https://readthedocs.org/projects/pyicecat/badge/)](http://pyicecat.readthedocs.org/en/)
 
 IceCat
 ------
